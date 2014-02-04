@@ -1,0 +1,1084 @@
+<!-- <script type="text/javascript" src="http://www.theglobeandmail.com/static/templates/interactives/raphael/raphael-min.js"></script>
+<!-- Data - ->
+<script src="http://www.theglobeandmail.com/static/national/census/2011/nhs/part1/nhs-assets/nhs-cities.js"></script>
+<script src="http://www.theglobeandmail.com/static/national/census/2011/nhs/part1/nhs-assets/nhs-data.js"></script>
+<!--<script src="http://www.theglobeandmail.com/static/national/census/2011/nhs/part1/nhs-assets/languagesProcessed.js"></script><script src="http://www.theglobeandmail.com/static/national/census/2011/nhs/part1/nhs-assets/immProcessed.js"></script>- ->
+
+<!-- jQuery UI Autocomplete - ->
+<script type="text/javascript" src="http://www.theglobeandmail.com/static/national/census/2011/sept-fam/jquery-ui.js"></script>
+<!--<script src="jquery-ui-autocomplete.js"></script>- ->
+-->
+
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<script src="jquery.js" type="text/javascript"></script>
+<link rel="stylesheet" href="http://beta.images.theglobeandmail.com/media/www/css/global.fonts.css">
+<script src="raphael-min.js"></script>
+<!-- Data -->
+<script src="nhs-assets/nhs-cities.js"></script>
+<script src="nhs-assets/nhs-data.js"></script>
+<!--<script src="nhs-assets/languagesProcessed.js"></script><script src="nhs-assets/immProcessed.js"></script>-->
+
+<!-- jQuery UI Autocomplete -->
+<script src="jquery-ui-autocomplete.js"></script>
+
+<style type="text/css">
+a{outline:none;}
+body {
+    background: white;
+    color: #333;
+    font: normal normal 12px/1.5 Verdana, Helvetica, Arial, sans-serif;
+}
+#gi{
+	width:940px;
+	margin:0 auto;
+	position: relative;
+}
+</style>
+
+<script type="text/javascript">
+/* - Social sharing - */
+var win = null;
+var shareURL = "http://www.tgam.ca/nhs-quiz"; //TODO
+ 
+function share(mypage, myname, w, h, scroll, pos) {
+    if (pos == "random") {
+        LeftPosition = (screen.width) ? Math.floor(Math.random() * (screen.width - w)) : 100;
+        TopPosition = (screen.height) ? Math.floor(Math.random() * ((screen.height - h) - 75)) : 100;
+    }
+    if (pos == "center") {
+        LeftPosition = (screen.width) ? (screen.width - w) / 2 : 100;
+        TopPosition = (screen.height) ? (screen.height - h) / 2 : 100;
+    } else if ((pos != "center" && pos != "random") || pos == null) {
+        LeftPosition = 0;
+        TopPosition = 20
+    }
+    settings = 'width=' + w + ',height=' + h + ',top=' + TopPosition + ',left=' + LeftPosition + ',scrollbars=' + scroll + ',location=no,directories=no,status=no,menubar=no,toolbar=no,resizable=no';
+    win = window.open(mypage, myname, settings);
+};
+
+$('document').ready(function(){
+function addCommas(nStr)
+{
+	nStr += '';
+	x = nStr.split('.');
+	x1 = x[0];
+	x2 = x.length > 1 ? '.' + x[1] : '';
+	var rgx = /(\d+)(\d{3})/;
+	while (rgx.test(x1)) {
+		x1 = x1.replace(rgx, '$1' + ',' + '$2');
+	}
+	return x1 + x2;
+}
+function sortJson(objArray, prop, direction){
+    if (arguments.length<2) throw new Error("sortJsonArrayByProp requires 2 arguments");
+    var direct = arguments.length>2 ? arguments[2] : 1; //Default to ascending
+ 
+    if (objArray && objArray.constructor===Array){
+        var propPath = (prop.constructor===Array) ? prop : prop.split(".");
+        objArray.sort(function(a,b){
+            for (var p in propPath){
+                if (a[propPath[p]] && b[propPath[p]]){
+                    a = a[propPath[p]];
+                    b = b[propPath[p]];
+                }
+            }
+            // convert numeric strings to integers
+            a = a.match(/^\d+$/) ? +a : a;
+            b = b.match(/^\d+$/) ? +b : b;
+            return ( (a < b) ? -1*direct : ((a > b) ? 1*direct : 0) );
+        });
+    }
+}
+function getUrlVars()
+{
+var vars = [], hash;
+var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+for(var i = 0; i < hashes.length; i++)
+{
+hash = hashes[i].split('=');
+vars.push(hash[0]);
+vars[hash[0]] = hash[1];
+}
+return vars;
+}
+function getRandom(min,max){
+	return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+  /*- Vars - */
+  var question = 0,
+  	  questionTotal = $('.gi-unit').length; // the active question
+
+  /* - Prep data - */
+  var cities = [],
+	  accentMap = {
+      	"À":"A",
+		"Â":"A",
+		"Ä":"A",
+		"È":"E",
+		"É":"E",
+		"Ê":"E",
+		"Ë":"E",
+		"Î":"I",
+		"Ï":"I",
+		"Ô":"O",
+		"Œ":"OE",
+		"Ù":"U",
+		"Û":"U",
+		"Ü":"U",
+		"Ÿ":"Y",
+		"à":"a",
+		"â":"a",
+		"ä":"a",
+		"è":"e",
+		"é":"e",
+		"ê":"e",
+		"ë":"e",
+		"î":"i",
+		"ï":"i",
+		"ô":"o",
+		"œ":"oe",
+		"ù":"u",
+		"û":"u",
+		"ü":"u",
+		"ÿ":"y"
+      },
+      normalize = function( term ) {
+      	var ret = "";
+	      for ( var i = 0; i < term.length; i++ ) {
+        	ret += accentMap[ term.charAt(i) ] || term.charAt(i);
+      	}
+      	return ret;
+      };
+  $.each(data, function(i,d){
+  	cities.push(d["city"] + ', ' + d["province"]);
+  })
+  
+  /*- Autocomplete - */
+	$('#gi-autocomplete').autocomplete({
+		source: function( request, response ) {
+        	var matcher = new RegExp( $.ui.autocomplete.escapeRegex( request.term ), "i" );
+        	response( $.grep( cities, function( value ) {
+          	value = value.label || value.value || value;
+          	return matcher.test( value ) || matcher.test( normalize( value ) );
+        	}) );
+      	},
+      	minLength: 4,
+		select: function(e,ui){ 
+			if(jQuery.inArray(ui.item.label,cities) > 0) {
+				processInput(ui.item.label) 
+				$('.results-not-found').hide();	
+			} else {
+				$('.results-not-found').show();
+			}
+		},
+		autoFocus: true,
+		focus: function(e,ui){ $(this).addClass('.hover')}
+	})
+	var storeVal = 'Enter your city';
+	$('#gi-autocomplete').click(function(){
+		if($(this).val() == storeVal) $(this).val('');
+		$(this).css('border','1px solid #8e8e8e');
+		$(this).blur(function(){
+			if($(this).val() == '') $(this).val(storeVal);
+			$(this).css('border','1px solid #b0b0b0');
+		})
+	})
+  /*- Preload variables -*/
+  var preCity = getUrlVars()["city"];
+  if(preCity){
+	if(jQuery.inArray(cities,preCity) > 0){
+		processInput(decodeURIComponent(preCity));
+		$('#gi-autocomplete').val(decodeURIComponent(preCity)).css('color','black');
+	}
+  }
+  
+  /* - Quiz answer support - */
+  var falseLanguages = "Spanish;Chinese, n.o.s.;German;Cantonese;Mandarin;Italian;".split(';');
+  var avgImmigration = .25;
+  var falsePob = "Eastern Asia;Southern Europe;Northern Europe;Southern Asia;Southeast Asia".split(';');
+
+  /* - Create the quiz - */
+  // TO DO: Reset on new input submission
+  function processInput(name){
+  	var prov = name.split(', ')[1],
+  		match = name.split(', ')[0],
+  		name = match.split(' (')[0],
+  		row = '',
+  		storeRow = '';
+	// Find matching row
+	$.each(data, function(i,d){
+  		if(d.city == match && d.province == prov) row = d, storeRow = d;
+  	});
+  	// Esnure a match was found
+  	if(row!=''){
+  	// TO DO: Alter categories with no matches or not enough info
+  	
+	// Apply general matching info
+  	$('.gi-city').text(name.split(',')[0].split('(')[0]);
+  	// Show quiz area
+  	$('#user').slideDown();
+  	
+  	/* - 0. Language - */
+    row = storeRow;
+    if(row["imm"] == 0){
+		$('#question0 .canada-note').show();
+    	$('#question0 .gi-city').text('Canada');
+    } else {
+  	var q = 0,
+  		names = [],
+  		numbers = [];
+  		$('.gi-language').text(row.lang);
+  		$('.gi-language-num').text(addCommas(row["lang-num"]));
+  		
+  		// Supply false answers
+  		var q1 = true,
+  			qCount = 0;
+  		while(q1){
+  			if(falseLanguages[qCount] != row.lang) $('#question1 .radio').eq(0).text(falseLanguages[qCount]), q1 = false;
+  			qCount++;
+  		}
+  		var q2 = true,
+  			qCount = 0;
+  		while(q2){
+  			if(falseLanguages[qCount] != row.lang && falseLanguages[qCount] != $('#question1 .radio').eq(0).text()) $('#question1 .radio').eq(2).text(falseLanguages[qCount]), q2 = false;
+  			qCount++;
+  		}
+    }
+    /* - 1. Immigration - */
+    row = storeRow;
+    if(row["imm"] == 0){
+		$('#question2 .canada-note').show();
+    	$('#question2 .gi-city').text('Canada');
+    } else {
+  		var avgImmHighLow = 'lower';
+		var immTotal = parseInt(row["imm"]) + parseInt(row["non-imm"]);
+  		$('.gi-imm').text(addCommas(row["imm"]));
+  		$('.gi-imm-recent').text(addCommas(row["recent"]));
+		$('#question2 .correct').text(((row["imm"]/immTotal)*100).toFixed(2) + ' per cent');
+		$('#question2 .radio').eq(1).text((getRandom(row["imm"]/2,parseInt(row["imm"])*2)/immTotal*100).toFixed(2) + ' per cent');
+	    $('#question2 .radio').eq(2).text((getRandom(row["imm"]/2,row["imm"])/immTotal*100).toFixed(2) + ' per cent');
+    }
+    /* - 3. Place of Birth - */
+    row = storeRow;
+	if(row["pob"] == ""){
+		$('#question4 .canada-note').show();
+    	$('#question4 .gi-city').text('Canada');
+    } else {
+     $('#question4 .correct').text(row["pob"]);
+  		// Supply false answers
+  		var q1 = true,
+  			qCount = 0;
+  		while(q1){
+  			if(falsePob[qCount] != row.pob) $('#question4 .radio').eq(0).text(falsePob[qCount]), q1 = false;
+  			qCount++;
+  		}
+  		var q2 = true,
+  			qCount = 0;
+  		while(q2){
+  			if(falsePob[qCount] != row.pob && falsePob[qCount] != $('#question4 .radio').eq(0).text()) $('#question4 .radio').eq(1).text(falsePob[qCount]), q2 = false;
+  			qCount++;
+  		}
+  		$('.gi-pob-num').text(row["pob-num"]);
+	  	$('.gi-pob').text(row["pob"]);
+    }
+    }
+  }
+  
+  /*- Radio -*/
+  $('.radio').click(function(){
+  	if(!$(this).parent().hasClass('alreadySelected')){
+  	   $(this).parent().addClass('alreadySelected').find('.radio').removeClass('selected');
+  	   $(this).addClass('selected');
+  	   checkAnswer($(this));
+  	   addCount();
+  	}
+  })
+    
+  /* - Verify answer - */
+  function checkAnswer(sel){
+  	var $selPar = sel.parents('.gi-unit');
+  	if(sel.hasClass('correct')){
+	  	$('#nav-links li').eq(question).addClass('right'); 
+	  	$selPar.find('.right').show();
+	  	$selPar.find('.wrong').hide();
+  	} else {
+  	  	$('#nav-links li').eq(question).addClass('wrong');
+	  	$selPar.find('.wrong').show();
+	  	$selPar.find('.right').hide();
+  	}
+  	$selPar.find('.answer').slideDown();
+	$selPar.find('.radio').css('color','#b0b0b0');
+	$selPar.find('.correct').css("color","green");
+  }
+  
+  /*- Progress Bar -*/
+  var vizW = 140,
+  	  viz = Raphael('progress-viz',vizW,25),
+  	  bg = viz.rect(0,0,vizW,25).attr({'fill':'#dadada','stroke':'none'}),
+  	  progress = viz.rect(0,0,0,25).attr({'fill':'#27bf2b','stroke':'none'});
+  $('#total-questions').text(questionTotal);
+  
+  function addCount(){
+  	$('.progress #complete-questions').text(parseInt($('#complete-questions').text()) + 1);
+  	var progressPoint = parseInt($('.progress #complete-questions').text());
+  	progress.animate({
+  		width:vizW/questionTotal*progressPoint
+  	},300,"<>")
+  	if(vizW/questionTotal*progressPoint >= vizW){
+  		$('.progress p').text('COMPLETE!');
+  		$('.social-share').slideDown();
+  	}
+  }
+
+  
+  /* - Navigation - */
+  $('.nav-buttons a').click(function(){
+  	if(!$(this).parent().hasClass('inactive')){
+  		if($(this).text() == 'Back'){
+			question--;
+			$('.gi-unit').eq(question+1).fadeOut(function(){
+				$('.gi-unit').eq(question).fadeIn();
+  			});
+
+  		} else {
+	  		question++;
+  			$('.gi-unit').eq(question-1).fadeOut(function(){
+		  		$('.gi-unit').eq(question).fadeIn();
+  			});
+
+  		}
+  		if(question > 0){
+  			$('.gi-button.inactive').removeClass('inactive');
+  		} else {
+  			$('.gi-button').eq(1).addClass('inactive');
+  		}
+  	}
+	adjustNavCount();
+  	return false;
+  })
+  $('#nav-links a').click(function(){
+	newQuestion = $(this).parent().index();
+  	$('.gi-unit').eq(question).fadeOut(function(){
+		$('.gi-unit').eq(newQuestion).fadeIn();
+  	})
+  	question = newQuestion;
+  	$('#nav-links .sel').removeClass('sel');
+  	$(this).parent().addClass('sel');
+  	return false;
+  })
+  function adjustNavCount(){
+  	$('#nav-links .sel').removeClass('sel').next().addClass('sel');
+  }
+  
+  /* - Social share - */
+  $('.tweet-this a').click(function(){
+  	var tweetText = $(this).parents('.answer-cell').find('p').text();
+  	$(this).attr('href',$(this).attr('href')+tweetText);
+  	share($(this).attr('href'),'template_window','500','400','yes','center');
+  	return false;
+  })
+  
+})
+</script>
+<style type="text/css">
+#gi{
+	margin:0 auto;
+	font-family:Arial,Helvetica,Verdana,sans-serif;
+	font-size:14px;
+}
+.embeddable-body p{
+	line-height: 1.5;
+}
+#gi a{
+	text-decoration: none;
+}
+#gi p{
+	margin:0 0 10px 0;
+}
+#gi h2, #gi h3{
+	font-family:"PrattHeavy",sans-serif;
+	letter-spacing:-1px;
+}
+#gi h2{
+	font-size:42px;
+	text-align: center;
+	line-height:1.2;
+}
+#gi h3{
+	font-size:36px;
+	line-height:0;
+	color:#bc2224;
+	padding:32px 0;
+	margin:0 0 20px 0;
+	text-indent:80px;
+	background-repeat: no-repeat;
+}
+#gi h4{
+	margin-bottom: 10px;
+	padding-bottom: 0;
+	font-family: "PrattHeavy",sans-serif;
+	font-weight: normal;
+}
+#question1 h3{
+	background-image:url('nhs-assets/h2-language.png');
+}
+#question2 h3{
+	background-image:url('nhs-assets/h2-immigration.png');
+}
+#question3 h3{
+	background-image:url('nhs-assets/h2-citizenship.png');
+}
+#question4 h3{
+	background-image:url('nhs-assets/h2-placeofbirth.png');
+}
+#question5 h3{
+	background-image:url('nhs-assets/h2-ethnicorigin.png');
+}
+#question6 h3{
+	background-image:url('nhs-assets/h2-visibleminorities.png');
+}
+#question7 h3{
+	background-image:url('nhs-assets/h2-religion.png');
+}
+#question8 h3{
+	background-image:url('nhs-assets/h2-aboriginalpeoples.png');
+}
+.clearfloat{
+	width:100%;
+	height:2px;
+	clear:both;
+}
+.gi-unit{
+	margin:0 auto 40px;
+	width:575px;
+	display: none;
+	float:left;
+	border-left:1px solid #ececec;
+	padding-left:50px;
+	min-height:400px;
+}
+.gi-unit.active{
+	display:block;
+}
+#gi input{
+	padding:10px;
+	width:495px;
+	outline:none;
+	border:1px solid #b0b0b0;
+	font-size:14px;
+	display: block;
+	margin:0 auto;
+}
+#autocomplete-confirm{
+padding: 21px 0 30px 0;
+text-align: center;
+font-size: 15px;
+}
+.results-not-found{
+	display:none;
+	text-align: center;
+	padding:10px 0;
+}
+/* - Questions - */
+.prov-match{
+	font-size:12px;
+	border:1px solid #ececec;
+	background-color:rgb(255, 255, 203);
+	padding:10px;
+	margin-bottom:10px;
+	display:none;
+}
+.question-prompt, .question-options{
+	font-size:18px;
+	width:100%;
+	clear:both;
+	float:left;
+	margin-top:20px;
+}
+.question-wrapper{
+	float:right;
+	position:relative;
+	left:-50%;
+	text-align:left;
+}
+.question-options{
+	left:50%;
+	position: relative;
+}
+.question-options div{
+	float:left;
+	position: relative;
+}
+.radio{
+	float:left;
+	cursor:pointer;
+	margin-left:20px;
+	text-indent: 25px;
+	height: 20px;
+	line-height: 1;
+	background-image: url('nhs-assets/bullet.png');
+	background-repeat: no-repeat;
+}
+.radio.selected{
+	background-position:0 -20px;
+}
+/* - Answers - */
+.answer{
+	margin-top:40px;
+	display:none;
+}
+.rightwrong{
+	font-weight:bold;
+	text-align: center;
+	font-size:20px;
+}
+.answer-cell{
+	text-align: center;
+	width:345px;
+	margin:10px auto;
+	border:1px solid #b4b4b4;
+	border-radius: 3px;
+	-moz-border-radius: 3px;
+	-webkit-border-radius: 3px;
+	border-shadow:2px 2px 2px 5px #333;
+	-moz-border-shadow:2px 2px 2px 5px #333;
+	-webkit-border-shadow:2px 2px 2px 5px #333;
+	padding:20px;
+}
+.answer-cell p{
+	font-size:23px;
+	font-family:"PrattRegular",Georgia,sans-serif;
+}
+.tweet-this{
+	font-size:10px;
+	text-transform: uppercase;
+	width:100%;
+}
+.tweet-this a{
+	height:20px;
+	background-image:url('nhs-assets/twitter-bird.png?1');
+	background-repeat: no-repeat;
+	background-position: 0 -19px;
+	width:100px;
+	color:#808080;
+	padding:5px 25px;
+}
+.tweet-this a:hover{
+	background-position:0 0;
+}
+/*- Context - */
+.context{
+	margin:40px 0;
+	font-size:18px;
+}
+/* - Nav & Progress- */
+#gi-nav{
+	width:150px;
+	padding-right:20px;
+	float:left;
+}
+#nav-links a{
+	font-size:12px;
+	color:#656565;
+}
+#nav-links ul, #nav-links li{
+	list-style-type:none;
+	margin:0;
+	padding:0;
+}
+#nav-links li{
+	background-image:url('nhs-assets/checkxblank.png?2');
+	background-repeat: no-repeat;
+	padding:0 0 0 22px;
+	margin:12px 0;
+	line-height:1.2;
+	background-position:0 -34px;
+}
+#nav-links li.sel{
+	background-position:0 -51px;
+}
+#nav-links li.right{
+	background-position: 0 0;
+}
+#nav-links li.wrong{
+	background-position:0 -17px;
+}
+#nav-links li a{
+	color:rgb(218, 218, 218);
+}
+#nav-links li.right a, #nav-links li.wrong a{
+	color:#656565;
+}
+#nav-links ul li.sel a{
+	color:#656565;
+}
+.progress{
+	float:left;
+	font-size:11px;
+}
+.progress-viz{
+	position: relative;
+	float:left;
+	width:140px;
+}
+.nav-buttons{
+	float:right;
+	width:400px;
+}
+.gi-button{
+	float:right;
+}
+.gi-button a{
+font-size:12px;
+	color:white;
+	text-transform: uppercase;
+	padding:5px 20px;
+	display: block;
+	float:right;
+	background-color:#a41919;
+	font-weight:normal;
+	border-radius: 3px;
+	-moz-border-radius: 3px;
+	-webkit-border-radius: 3px;
+}
+.gi-button.inactive a,.gi-button.inactive a:hover{
+	background-color:#999999 !important;
+}
+.gi-button a:hover{
+	background-color:#ae2d2d;
+}
+
+/*- Auto complete -*/
+#autocomplete-container div{
+float:left;
+}
+.ui-autocomplete{
+margin-top:1px;
+border:1px solid #dadada;
+border-right:2px solid #dadada;
+border-bottom:2px solid #dadada;
+width:474px !important;
+padding:0 17px;
+font-family:Arial,Helvetica,sans-serif;
+font-size:18px;
+z-index:1000;
+max-height:300px;
+overflow-y:auto;
+background-color:white;
+overflow-x:hidden;
+}
+.ui-autocomplete li{
+	list-style-type:none;
+	margin:10px 0;
+	font-size:12px;
+	padding:0;
+}
+.ui-autocomplete ul{
+	padding:0;
+	margin:0;
+}
+.ui-autocomplete li a{
+width: 480px;
+display: block;
+padding:10px;
+}
+.ui-autocomplete li:hover, .ui-state-hover{
+background-color:#ececec;
+}
+#user{
+	display:none;
+	width: 800px;
+	margin: 0 auto;
+}
+.ui-helper-hidden-accessible{
+	display:none;
+}
+/* - Social - */
+.social-share{
+	display:none;
+	margin-top:10px;
+	float: left;
+	width: 159px;
+	clear: both;
+}
+.social-share p{
+	font-weight:bold;
+	font-size:12px;
+}
+
+/* Smartphones -------------------------------*/
+@media screen and (max-width: 480px) {
+	#gi p, #gi,.gi-chart,.gi-unit,#user{
+		margin-left:0;
+		padding:0;
+		width:100%;
+	}
+	#gi input{
+	 	width:80%;
+	 	margin:0 auto;
+	}
+	#gi h2{
+		font-size:20px;
+	}
+	#gi h3{
+		font-size:20px;
+		line-height:1;
+	}
+	.ui-autocomplete{
+		width:80% !important;
+		padding:0;
+	}
+	#autocomplete-confirm{
+		display:none !important;
+	}
+	#gi-nav{
+		margin:0 auto;
+		float:none;
+		text-align: center;
+	}
+	#nav-links{
+		display:none;
+	}
+	.gi-unit{
+		padding:0;
+		padding-top:20px;
+		border:0;
+	}
+	.question-prompt,.question-options,#gi,.context{
+		font-size:15px;
+	}
+	.answer{
+		margin-top:10px;
+	}
+	.radio{
+		width:100%;
+		padding:0;
+		margin:5px 0;
+	}
+	.answer-cell{
+		width:80%;
+		margin:0 auto;
+		font-size:16px;
+	}
+
+}
+
+</style>
+<!--[if IE 7]>
+<style type="text/css">
+
+</style>
+<![endif]-->
+
+<div id="gi">
+
+	<h2><img src="nhs-assets/city.png" /><br />How well do you<br />know your city?</h2>
+	<input id="gi-autocomplete" type="text/css" value="Enter your city"/>
+	<p class="results-not-found">Sorry, no match was found. Please try a different location.</p>
+<!-- Navigation and progress -->
+<div id="user">
+	<p id="autocomplete-confirm">Ah, <span class="gi-city"></span> &mdash; a great place to live. Okay, here's your personalized quiz. Good luck!</p>
+	<div id="gi-nav">
+		<h4><center><span class="gi-city"></span>'s Quiz</center></h4>
+		<div class="progress">
+			<div id="progress-viz"></div>
+			<p><span id="complete-questions">0</span>/<span id="total-questions">10</span> COMPLETE</p>
+		</div>
+		<div class="clearfloat"></div>
+		<div id="nav-links">
+			<ul>
+				<li class="sel"><a href="#">Language</a></li>
+				<li><a href="#">Immigration</a></li>
+				<li><a href="#">Citizenship</a></li>
+				<li><a href="#">Place of birth</a></li>
+				<li><a href="#">Ethnic origin</a></li>
+				<li><a href="#">Visible minorities</a></li>
+				<li><a href="#">Religion</a></li>
+				<li><a href="#">Aboriginal Peoples</a></li>
+			</ul>
+		</div>
+		<div class="social-share">
+		 <p>Now share your results!</p>
+<a href="https://twitter.com/share?url=http://www.tgam.ca/nhs-quiz&amp;text=How well do you know your city? Find out here" rel="nofollow" onclick="share(this.href,'template_window','500','400','yes','center');return false" onfocus="this.blur()"><img src="http://beta.images.theglobeandmail.com/static/templates/interactives/photoquiz/images/twitter.png" border="0" title="Share on Twitter" alt="Share on Twitter"/></a> <a href="http://www.facebook.com/share.php?u=http://www.tgam.ca/nhs-quiz" rel="nofollow" onclick="share(this.href,'template_window','500','400','yes','center');return false" onfocus="this.blur()"><img src="http://beta.images.theglobeandmail.com/static/templates/interactives/photoquiz/images/facebook.png" border="0" title="Share on Facebook" alt="Share on Facebook"/></a>
+		</div>
+	</div>
+	
+<!-- Questions -->
+	<div class="gi-unit active" id="question1">
+		<h3>Language</h3>
+		<p class="question-prompt">Besides English and French, what language do people speak at home most often?</p>
+		<div class="question-wrapper">
+			<div class="question-options">
+				<div class="radio incorrect">
+					Punjabi
+				</div>
+					<div class="radio correct">
+					<span class="gi-language">Cantonese</span>
+				</div>
+				<div class="radio incorrect">
+					Japanese
+				</div>
+			</div>
+		</div>
+		<div class="clearfloat"></div>
+		<div class="answer">
+			<div class="rightwrong"><div class="right">You're right!</div><div class="wrong">Sorry, that's not it</div></div>
+			<div class="answer-cell">
+				<p>There are <span class="gi-language-num"></span> people in <span class="gi-city">Toronto</span> who speak <span class="gi-language"></span> at home.</p>
+				<div class="tweet-this"><a href="https://twitter.com/share?url=http://www.tgam.ca/nhs-quiz&amp;text=">Tweet this</a></div>
+			</div>
+			<div class="context">
+				<p>Across Canada, the most common non-official language was Chinese, which rose from XX per cent in 2006 to XX per cent in 2011.</p>
+				<div class="gi-viz-1"></div>
+			</div>
+		<div class="nav-buttons">
+			<div class="gi-button"><a href="#next">Next</a></div>
+		</div>
+		</div>
+	</div><!-- .gi-unit -->
+	
+	<div class="gi-unit" id="question2">
+		<h3>Immigration</h3>
+		<div class="prov-match">Note: There wasn't enough data about <span class="gi-city">your city</span> to create a question, so we've used data for Canada instead.</div>
+		<p class="question-prompt">What percentage of <span class="gi-city">your city</span>'s population are immigrants?</p>
+		<div class="question-wrapper">
+			<div class="question-options">
+				<div class="radio correct">
+					
+				</div>
+					<div class="radio incorrect">
+					
+				</div>
+				<div class="radio incorrect">
+					
+				</div>
+			</div>
+		</div>
+		<div class="clearfloat"></div>
+		<div class="answer">
+			<div class="rightwrong"><div class="right">You're right!</div><div class="wrong">Sorry, that's not it</div></div>
+			<div class="answer-cell">
+				<p>There are <span class="gi-imm"></span> immigrants living in <span class="gi-city"></span>, with <span class="gi-imm-recent"></span> arriving after 2006.</p>
+				<div class="tweet-this"><a href="https://twitter.com/share?url=http://www.tgam.ca/nhs-quiz&amp;text=">Tweet this</a></div>
+			</div>
+			<div class="context">
+				<p>Canada's immigrant population grew from XXX in 2006 to XXX in 2011, an increase of XXX per cent.</p>
+				<div class="gi-viz-1"></div>
+			</div>
+		<div class="nav-buttons">
+			<div class="gi-button"><a href="https://twitter.com/share?url=http://www.tgam.ca/nhs-quiz&amp;text=">Next</a></div>
+		</div>
+		</div>
+	</div><!-- .gi-unit -->
+
+	<div class="gi-unit" id="question3">
+		<h3>Citizenship</h3>
+		<p class="question-prompt">More and more Canadians hold citizenship to another country. What percentage of <span class="gi-city">your city</span>'s population hold dual citizenship?</p>
+		<div class="question-wrapper">
+			<div class="question-options">
+				<div class="radio incorrect">
+					3 per cent
+				</div>
+					<div class="radio incorrect">
+					13 per cent
+				</div>
+				<div class="radio correct">
+					15 per cent
+				</div>
+			</div>
+		</div>
+		<div class="clearfloat"></div>
+		<div class="answer">
+			<div class="rightwrong"><div class="right">You're right!</div><div class="wrong">Sorry, that's not it</div></div>
+			<div class="answer-cell">
+				<p>Almost 42 per cent of people in Toronto speak Cantonese.</p>
+				<div class="tweet-this"><a href="https://twitter.com/share?url=http://www.tgam.ca/nhs-quiz&amp;text=">Tweet this</a></div>
+			</div>
+			<div class="context">
+				<p>The second most common language was Punjabi (14%) followed by French (10%).</p>
+				<div class="gi-viz-1"></div>
+			</div>
+		<div class="nav-buttons">
+			<div class="gi-button"><a href="#next">Next</a></div>
+		</div>
+		</div>
+	</div><!-- .gi-unit -->		
+
+
+	<div class="gi-unit" id="question4">
+		<h3>Place of birth</h3>
+		<p class="question-prompt">What's the most common place of birth (besides Canada) for residents of <span class="gi-city">your city</span>?</p>
+		<div class="question-wrapper">
+			<div class="question-options">
+				<div class="radio incorrect">
+					
+				</div>
+					<div class="radio incorrect">
+					
+				</div>
+				<div class="radio correct">
+					
+				</div>
+			</div>
+		</div>
+		<div class="clearfloat"></div>
+		<div class="answer">
+			<div class="rightwrong"><div class="right">You're right!</div><div class="wrong">Sorry, that's not it</div></div>
+			<div class="answer-cell">
+				<p>There are <span class="gi-pob-num"></span> people living in <span class="gi-city"></span> who were born in <span class="gi-pob"></span>.</p>
+				<div class="tweet-this"><a href="https://twitter.com/share?url=http://www.tgam.ca/nhs-quiz&amp;text=">Tweet this</a></div>
+			</div>
+			<div class="context">
+				<p>In Canada, most people born outside of Canada originated from Eastern Asia, Southern Europe and Northern Europe.</p>
+				<div class="gi-viz-1"></div>
+			</div>
+		<div class="nav-buttons">
+			<div class="gi-button"><a href="#next">Next</a></div>
+		</div>
+		</div>
+	</div><!-- .gi-unit -->		
+
+
+	<div class="gi-unit" id="question5">
+		<h3>Ethnic origin</h3>
+		<p class="question-prompt">Many Canadians identify with an ethnic origin based in another part of the globe. What's the most common ethnic origin in <span class="gi-city"></span>?</p>
+		<div class="question-wrapper">
+			<div class="question-options">
+				<div class="radio correct">
+					Punjabi
+				</div>
+					<div class="radio incorrect">
+					Cantonese
+				</div>
+				<div class="radio incorrect">
+					French
+				</div>
+			</div>
+		</div>
+		<div class="clearfloat"></div>
+		<div class="answer">
+			<div class="rightwrong"><div class="right">You're right!</div><div class="wrong">Sorry, that's not it</div></div>
+			<div class="answer-cell">
+				<p>Almost 42 per cent of people in Toronto speak Cantonese.</p>
+				<div class="tweet-this"><a href="https://twitter.com/share?url=http://www.tgam.ca/nhs-quiz&amp;text=">Tweet this</a></div>
+			</div>
+			<div class="context">
+				<p>The second most common language was Punjabi (14%) followed by French (10%).</p>
+				<div class="gi-viz-1"></div>
+			</div>
+		<div class="nav-buttons">
+			<div class="gi-button"><a href="#next">Next</a></div>
+		</div>
+		</div>
+	</div><!-- .gi-unit -->		
+
+
+	<div class="gi-unit" id="question6">
+		<h3>Visible minorities</h3>
+		<p class="question-prompt">What is the most common group of visible minorities in <span class="gi-city"></span>?</p>
+		<div class="question-wrapper">
+			<div class="question-options">
+				<div class="radio correct">
+					Chinese
+				</div>
+					<div class="radio incorrect">
+					South Asian
+				</div>
+				<div class="radio incorrect">
+					Black
+				</div>
+			</div>
+		</div>
+		<div class="clearfloat"></div>
+		<div class="answer">
+			<div class="rightwrong"><div class="right">You're right!</div><div class="wrong">Sorry, that's not it</div></div>
+			<div class="answer-cell">
+				<p>Almost 42 per cent of people in Toronto speak Cantonese.</p>
+				<div class="tweet-this"><a href="https://twitter.com/share?url=http://www.tgam.ca/nhs-quiz&amp;text=">Tweet this</a></div>
+			</div>
+			<div class="context">
+				<p>The second most common language was Punjabi (14%) followed by French (10%).</p>
+				<div class="gi-viz-1"></div>
+			</div>
+		<div class="nav-buttons">
+			<div class="gi-button"><a href="#next">Next</a></div>
+		</div>
+		</div>
+	</div><!-- .gi-unit -->			
+
+
+	<div class="gi-unit" id="question7">
+		<h3>Religion</h3>
+		<p class="question-prompt">What's the most common religion in <span class="gi-city">your city</span>?</p>
+		<div class="question-wrapper">
+			<div class="question-options">
+				<div class="radio incorrect">
+					Protestant
+				</div>
+					<div class="radio incorrect">
+					Christian Orthodox
+				</div>
+				<div class="radio correct">
+					Roman catholic
+				</div>
+			</div>
+		</div>
+		<div class="clearfloat"></div>
+		<div class="answer">
+			<div class="rightwrong"><div class="right">You're right!</div><div class="wrong">Sorry, that's not it</div></div>
+			<div class="answer-cell">
+				<p><span class="gi-religion-percent">50 per cent</span> of <span class="gi-city">your city</span> are <span class="gi-religion-type">Roman Catholic</span>.</p>
+				<div class="tweet-this"><a href="https://twitter.com/share?url=http://www.tgam.ca/nhs-quiz&amp;text=">Tweet this</a></div>
+			</div>
+			<div class="context">
+				<p>This is followed by <span class="gi-religion-percent2">34.9 per cent</span> <span class="gi-religion-type2">Protestant</span> and <span class="gi-religion-percent3">2.3 per cent</span> <span class="gi-religion-type3">Christian Orthodox</span>. Here is the top 10 list:</p>
+				<div class="gi-viz-1"></div>
+			</div>
+		<div class="nav-buttons">
+			<div class="gi-button"><a href="#next">Next</a></div>
+		</div>
+		</div>
+	</div><!-- .gi-unit -->		
+
+
+	<div class="gi-unit" id="question8">
+		<h3>Aboriginal peoples</h3>
+		<p class="question-prompt">What percentage of <span class="gi-city">your city</span>'s population identifies as Aboriginal?</p>
+		<div class="question-wrapper">
+			<div class="question-options">
+				<div class="radio correct">
+					0.5 per cent
+				</div>
+					<div class="radio incorrect">
+					15 per cent
+				</div>
+				<div class="radio incorrect">
+					3 per cent
+				</div>
+			</div>
+		</div>
+		<div class="clearfloat"></div>
+		<div class="answer">
+			<div class="rightwrong"><div class="right">You're right!</div><div class="wrong">Sorry, that's not it</div></div>
+			<div class="answer-cell">
+				<p>There are <span class="gi-aboriginal">13,605</span> people who self-identify as Aboriginal in <span class="gi-city">your city</span>.</p>
+				<div class="tweet-this"><a href="https://twitter.com/share?url=http://www.tgam.ca/nhs-quiz&amp;text=">Tweet this</a></div>
+			</div>
+			<div class="context">
+				<p>This compares to <span class="gi-non-aboriginal">2,462,960</span> people who do not identify as Aboriginal.</p>
+				<div class="gi-viz-1"></div>
+			</div>
+		</div>
+	</div><!-- .gi-unit -->		
+
+</div><!-- user -->
+</div>
+<div style="color: #999;clear:both;
+width:100%;
+font: normal 10px/1.5em Arial, Helvetica, sans-serif;
+padding-top: 120px;
+text-align:left;
+float:left;">Source: Statistics Canada<br />Interactive by <a style="color:#999" href="mailto:sathompson@globeandmail.com">STUART A. THOMPSON<br /><a  style="color:#999" href="mailto:sathompson@globeandmail.com">FEEDBACK</a></div>
